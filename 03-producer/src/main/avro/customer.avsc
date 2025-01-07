@@ -1,0 +1,15 @@
+{
+  "namespace": "com.kafkapractice.serializer",
+  "type": "record",
+  "name": "Customer",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    }
+  ]
+}
