@@ -17,6 +17,9 @@ package com.kafkapractice.serializer;
 
 import java.util.Map;
 import java.util.Properties;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData.Record;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -24,9 +27,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CustomerApplication {
+public class GenericAvroCustomerApplication {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomerApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(GenericAvroCustomerApplication.class);
     private static final Map<String, String> env = System.getenv();
 
     public static void main(String[] args) {
@@ -41,16 +44,31 @@ public class CustomerApplication {
         props.put("schema.registry.url", env.get("KAFKA_SCHEMA_REGISTRY_URL"));
         // props.put("schema.registry.url", "localhost:8081");
 
-        String topic = "customerContacts";
+        String schemaString = "{\"namespace\":\"customerManagement.avro\","
+            + "\"type\":\"record\","
+            + "\"name\":\"Customer\","
+            + "\"fields\":["
+            + "{\"name\":\"id\",\"type\":\"int\"},"
+            + "{\"name\":\"name\",\"type\":\"string\"},"
+            + "{\"name\":\"email\",\"type\":[\"null\",\"string\"], \"default\":\"null\"}"
+            + "]}";
 
-        try (Producer<String, Customer> producer = new KafkaProducer<>(props)) {
+        try (Producer<String, GenericRecord> producer = new KafkaProducer<>(props)) {
+            Schema.Parser parser = new Schema.Parser();
+            Schema schema = parser.parse(schemaString);
+
             for (int i = 0; i < 10_000; i++) {
-                Customer customer = CustomerGenerator.getNext();
+                String name = "customer" + i;
+                String email = "email" + i + "@domain.com";
 
-                log.info("Customer {}: {}", i, customer);
+                GenericRecord customer = new Record(schema);
 
-                ProducerRecord<String, Customer> record = new ProducerRecord<>(topic,
-                    customer.getName(), customer);
+                customer.put("id", i);
+                customer.put("name", name);
+                customer.put("email", email);
+
+                ProducerRecord<String, GenericRecord> record = new ProducerRecord<>(
+                    "customerContacts", name, customer);
 
                 producer.send(record);
             }
